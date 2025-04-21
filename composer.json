@@ -1,0 +1,19 @@
+{
+    "name": "rogoss/router",
+    "description": "A small Router, that uses Attributes",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "rogoss\\router\\": "./"
+        }
+    },
+    "authors": [
+        {
+            "name": "Rocco Goßmann",
+            "email": "127580387+Rocco-Gossmann@users.noreply.github.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {}
+}
