@@ -6,11 +6,11 @@ Controllers and Routes are defined via Attributes.
 <!-- vscode-markdown-toc -->
 * [Installation](#Installation)
 * [Usage](#Usage)
-	* [The ìndex.php](#Thendex.php)
-		* [The /controllers Folder](#ThecontrollersFolder)
-		* [The /controllers/_.php File](#Thecontrollers_.phpFile)
-	* [Defining Controllers](#DefiningControllers)
-	* [Defining Routes](#DefiningRoutes)
+	* [The index.php](#the-indexphp)
+		* [The /controllers Folder](#The-controllers-Folder)
+		* [The /controllers/_.php File](#The-controllers_.php-File)
+	* [Defining Controllers](#Defining-Controllers)
+	* [Defining Routes](#Defining-Routes)
 
 <!-- vscode-markdown-toc-config
 	numbering=false
@@ -18,13 +18,13 @@ Controllers and Routes are defined via Attributes.
 	/vscode-markdown-toc-config -->
 <!-- /vscode-markdown-toc -->
 
-## <a name='Installation'></a>Installation
+## Installation
 Just copy the `Router.php` of this Repo into your project and include it.
 
-## <a name='Usage'></a>Usage
+## Usage
 
 
-### <a name='Thendex.php'></a>The ìndex.php
+### The index.php
 
 Usually, this is the entrypoint to your application, and the first PHP-Script 
 to be executed.
@@ -45,7 +45,7 @@ to be executed.
     ))->HandleRoute($_SERVER['REMOTE_URI']);
 ```
 
-#### <a name='ThecontrollersFolder'></a>The /controllers Folder
+#### The /controllers Folder
 
 This router handles SubDirectories as `controllers`
 
@@ -59,12 +59,12 @@ GET kitchen/coffemachine => __DIR__ . "/controllers/kitchen.php"
 GET kitchen/coffemachine/coffee.html => __DIR__ . "/controllers/kitchen.php"
 ```
 
-#### <a name='Thecontrollers_.phpFile'></a>The /controllers/_.php File
+#### The /controllers/_.php File
 If the requested URL does not contain a directory, the request will be handled
 by the Controller defined in this file.
 
 
-### <a name='DefiningControllers'></a>Defining Controllers
+### Defining Controllers
 As the already described, the Router uses the first directory of a URL to define the controller-file.
 Inside that file a Class with the Attribute `#[RouterController]` should be part
 of this File.
@@ -126,7 +126,7 @@ a basic controller file could look like this.
 > `/kitchen` (without trailing `/`) will be handled by `_.php` (the default controller) instead.
 
 
-### <a name='DefiningRoutes'></a>Defining Routes
+### Defining Routes
 Routes are `static` class functions identified by the `#[RouterRoute]` Attribute.
 
 RouterMethods are given 2 Parameters.
