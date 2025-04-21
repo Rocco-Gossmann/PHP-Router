@@ -1,17 +1,30 @@
-# PHP-Router
-<!-- TOC -->
 
-- [PHP-Router](#php-router)
-- [Installation](#installation)
-- [Usage](#usage)
-    - [The ìndex.php](#the-%C3%ACndexphp)
-        - [The /controllers Folder](#the-controllers-folder)
-        - [The /controllers/_.php File](#the-controllers_php-file)
-- [Defining Controllers](#defining-controllers)
-- [Defining Routes](#defining-routes)
+# PHP - Router
+A Small PHP-Lib providing Controller based Routing via PHP.
+Controllers and Routes are defined via Attributes.
 
-<!-- /TOC -->
-## The `ìndex.php`
+<!-- vscode-markdown-toc -->
+* [Installation](#Installation)
+* [Usage](#Usage)
+	* [The ìndex.php](#Thendex.php)
+		* [The /controllers Folder](#ThecontrollersFolder)
+		* [The /controllers/_.php File](#Thecontrollers_.phpFile)
+	* [Defining Controllers](#DefiningControllers)
+	* [Defining Routes](#DefiningRoutes)
+
+<!-- vscode-markdown-toc-config
+	numbering=false
+	autoSave=true
+	/vscode-markdown-toc-config -->
+<!-- /vscode-markdown-toc -->
+
+## <a name='Installation'></a>Installation
+Just copy the `Router.php` of this Repo into your project and include it.
+
+## <a name='Usage'></a>Usage
+
+
+### <a name='Thendex.php'></a>The ìndex.php
 
 Usually, this is the entrypoint to your application, and the first PHP-Script 
 to be executed.
@@ -32,7 +45,7 @@ to be executed.
     ))->HandleRoute($_SERVER['REMOTE_URI']);
 ```
 
-### The /controllers Folder
+#### <a name='ThecontrollersFolder'></a>The /controllers Folder
 
 This router handles SubDirectories as `controllers`
 
@@ -46,12 +59,12 @@ GET kitchen/coffemachine => __DIR__ . "/controllers/kitchen.php"
 GET kitchen/coffemachine/coffee.html => __DIR__ . "/controllers/kitchen.php"
 ```
 
-### The /controllers/_.php File
+#### <a name='Thecontrollers_.phpFile'></a>The /controllers/_.php File
 If the requested URL does not contain a directory, the request will be handled
 by the Controller defined in this file.
 
 
-# Defining Controllers
+### <a name='DefiningControllers'></a>Defining Controllers
 As the already described, the Router uses the first directory of a URL to define the controller-file.
 Inside that file a Class with the Attribute `#[RouterController]` should be part
 of this File.
@@ -102,7 +115,7 @@ a basic controller file could look like this.
 
     }
 ```
-> [!Attention]  
+> [!warning]  
 > Since the first found directory identfies the controller, you can't invoke the controller
 > by it's name alone.
 > 
@@ -113,7 +126,7 @@ a basic controller file could look like this.
 > `/kitchen` (without trailing `/`) will be handled by `_.php` (the default controller) instead.
 
 
-# Defining Routes
+### <a name='DefiningRoutes'></a>Defining Routes
 Routes are `static` class functions identified by the `#[RouterRoute]` Attribute.
 
 RouterMethods are given 2 Parameters.
