@@ -36,10 +36,10 @@ to be executed.
 
     (new Router(
 
-        // Folder, where the Router will search for suitable routers
+        // Folder, where the Router will search for suitable Controllers and Routes
         __DIR__ . "/controllers",
 
-        // The Default router, used to handle all calles to the none domain
+        // The Default Controller, used to handle all calles to the domain
         __DIR__ . "/controllers/_.php",
 
     ))->HandleRoute($_SERVER['REMOTE_URI']);
