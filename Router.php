@@ -36,11 +36,11 @@ namespace rogoss\router;
  *in _.php:
  * -----------------------------------------------------------------------------
  * <?php
- * 
- * use \rogoss\router\Router 
- * use \rogoss\router\RouterController 
- * use \rogoss\router\RouterRoute 
- * 
+ *
+ * use \rogoss\router\Router
+ * use \rogoss\router\RouterController
+ * use \rogoss\router\RouterRoute
+ *
  * #[RouterController]
  * class DefaultController {
  *   #[
@@ -70,16 +70,22 @@ namespace rogoss\router;
  * in office.php
  * -----------------------------------------------------------------------------
  * <?php
- * 
- * use \rogoss\router\Router 
- * use \rogoss\router\RouterController 
- * use \rogoss\router\RouterRoute 
- * 
+ *
+ * use \rogoss\router\Router
+ * use \rogoss\router\RouterController
+ * use \rogoss\router\RouterRoute
+ *
  * #[RouterController]
  * class OfficeController {
- *   #[RouterRoute("")] // <-- this is the entry for people just calling "/office/"
+ *   #[ RouterRoute( "" ) ] // <-- this is the entry for calls to "/office/"
  *   public function OfficeIndexButNameStillDoesNotMatter() {
  *     echo "welcome to the office"
+ *     // do stuff in this route ...
+ *   }
+ *
+ *   #[ RouterRoute( expression: "([0-9]+)/details" ) ] // <-- this is the entry for calls to, for example, "/office/10/details"
+ *   public function OfficeIndexButNameStillDoesNotMatter($router, $path, $officeId) {
+ *     echo "welcome to the office with the id ", $officeId
  *     // do stuff in this route ...
  *   }
  * }
@@ -101,12 +107,16 @@ namespace rogoss\router;
  *
  */
 
-
-
 use Attribute;
 use Exception;
 use ReflectionClass;
 
+/** Thrown if Router fails to initialize */
+class RouterException extends Exception
+{
+	const CODE_MISSING_CONTROLLERDIR = 1;
+	const CODE_ROUTE_WITHOUT_DEFINITION = 2;
+}
 
 // Using attributes and Reflections to identify valid Controllers and Routes
 // that way, we are not bound to keeping a specific Class or Method Name
@@ -118,26 +128,88 @@ use ReflectionClass;
 #[Attribute(Attribute::TARGET_CLASS)]
 class RouterController
 {
-	public static function handle404()
+	public static function handle404() : void
 	{
 		http_response_code(404);
 	}
 }
 
+/** @internal */
+abstract class RouteParser
+{
+	abstract function hitsRoute(string $route, string $path): bool;
+
+    /** @return array */
+    abstract function routeParameters(): array;
+}
+
+/** @internal */
+class SimpleRouteParser extends RouteParser
+{
+	private string $route = "";
+    public function hitsRoute(string $route, string $path): bool
+    {
+		$this->route = $path;
+		return strtolower($route) == $path;
+    }
+
+	public function routeParameters(): array { return [ $this->route ]; }
+}
+
+/** @internal */
+class ExpressionParser extends RouteParser
+{
+	private $params = [];
+
+    public function hitsRoute(string $route, string $path): bool
+    {
+		$this->params = [];
+		return preg_match("#" . $route . "#", $path, $this->params);
+    }
+
+	public function routeParameters(): array
+	{
+		return $this->params;
+	}
+}
+
+
 /** the #[RouterRoute] Attribute Identifies what route this method will serve */
 #[Attribute(Attribute::TARGET_METHOD | Attribute::IS_REPEATABLE)]
 class RouterRoute
 {
-	public function __construct(public string $sRoute) {}
+	private string $sRoute = "";
+	private RouteParser $routeParser;
+
+	public function __construct(
+		?string $route = null,
+		?string $expression = null
+	) {
+		if(!is_null($route))
+		{
+			$this->routeParser = new SimpleRouteParser($route);
+			$this->sRoute = $route;
+		}
+		else if(!is_null($expression))
+		{
+			(preg_match("#" . $expression . "#", ""));
+
+			$this->routeParser = new ExpressionParser($route);
+			$this->sRoute = $expression;
+		}
+		else throw new RouterException(
+			"route without path or expression definition, please set either `route` or `expression` function parameter => set parameter: " . var_export(func_get_args(), true)
+		);
+	}
+
+	public function hitsRoute(string $path) : bool {
+		return $this->routeParser->hitsRoute($this->sRoute, $path);
+	}
+
+	public function routeParams() : array {
+		return $this->routeParser->routeParameters() ?? [];
+	}
 }
-
-
-/** Thrown if Router fails to initialize */
-class RouterException extends Exception
-{
-	const CODE_MISSING_CONTROLLERDIR = 1;
-}
-
 
 
 class Router
@@ -155,12 +227,11 @@ class Router
 		if (empty($this->controllerDirectory)) throw new RouterException("Directory {$controllerDirectory} does not exist", RouterException::CODE_MISSING_CONTROLLERDIR);
 	}
 
-
 	/**
 	 * figures out what controller and method to call, based on the given full url
 	 * @param string $url  - example: $_SERVER['REQUEST_URI'] on apache
 	 */
-	public function HandleRoute($url)
+	public function HandleRoute(string $url) : never
 	{
 		$aURL = parse_url($url);
 
@@ -181,7 +252,11 @@ class Router
 
 		// If no suitable controllerfile was found yet, use the default one
 		if (is_null($sControllerFile)) $sControllerFile = $this->defaultControllerFileName;
-		if (empty($sControllerFile)) return RouterController::handle404();
+		if (empty($sControllerFile))
+		{
+			RouterController::handle404();
+			exit;
+		}
 
 		// Scan the controllerfile and invoce the appropriate route
 		require_once $sControllerFile;
@@ -198,7 +273,6 @@ class Router
 			foreach ($oClassReflection->getAttributes() as $oAttr) {
 				if ($oAttr->getName() != $sControllerClassName) continue;
 
-				// Found a controller
 				// => check methods
 				$aMethods = $oClassReflection->getMethods();
 				foreach ($aMethods as $oMethod) {
@@ -209,9 +283,10 @@ class Router
 						// => check the path it serves
 						/** @var RouterRoute $oRoute */
 						$oRoute = $oAttr->newInstance();
-						if (strtolower($oRoute->sRoute) == $sPath) {
+						if ($oRoute->hitsRoute($sPath)) {
 							// Bingo !!!
-							return $oMethod->invokeArgs(null, [$this, $sPath]);
+							$oMethod->invokeArgs(null, $oRoute->routeParams());
+							exit;
 						}
 					}
 				}
@@ -220,14 +295,10 @@ class Router
 		}
 
 		RouterController::handle404();
+		exit;
 	}
 
-	/**
-	 * @param string $path
-	 * @param string $pathExcess  will hold the remaining part of the url, after the controller was extracted
-	 * @return string|null - the extract
-	 */
-	private function _extractControllerFileNameFromPathList(string $path, string &$pathExcess)
+	private function _extractControllerFileNameFromPathList(string $path, string &$pathExcess) : null|string|bool
 	{
 		$sControllerFile = null;
 		if (empty($path)) return $sControllerFile;

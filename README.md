@@ -3,30 +3,28 @@
 A Small PHP-Lib providing Controller based Routing via PHP.
 Controllers and Routes are defined via Attributes.
 
-<!-- vscode-markdown-toc -->
-* [Installation](#Installation)
-* [Usage](#Usage)
-	* [The ìndex.php](#Thendex.php)
-		* [The /controllers Folder](#ThecontrollersFolder)
-		* [The /controllers/_.php File](#Thecontrollers_.phpFile)
-	* [Defining Controllers](#DefiningControllers)
-	* [Defining Routes](#DefiningRoutes)
+<!-- vim-markdown-toc GFM -->
 
-<!-- vscode-markdown-toc-config
-	numbering=false
-	autoSave=true
-	/vscode-markdown-toc-config -->
-<!-- /vscode-markdown-toc -->
+* [Installation](#installation)
+* [Usage](#usage)
+    * [The ìndex.php](#the-ìndexphp)
+        * [The /controllers Folder](#the-controllers-folder)
+        * [The /controllers/_.php File](#the-controllers_php-file)
+    * [Defining Controllers](#defining-controllers)
+    * [Defining Routes](#defining-routes)
+    * [Defining Expression Routes](#defining-expression-routes)
 
-## <a name='Installation'></a>Installation
+<!-- vim-markdown-toc -->
+
+## Installation
 Just copy the `Router.php` of this Repo into your project and include it.
 
-## <a name='Usage'></a>Usage
+## Usage
 
 
-### <a name='Thendex.php'></a>The ìndex.php
+### The ìndex.php
 
-Usually, this is the entrypoint to your application, and the first PHP-Script 
+Usually, this is the entrypoint to your application, and the first PHP-Script
 to be executed.
 ```php
 <?php
@@ -45,7 +43,7 @@ to be executed.
     ))->HandleRoute($_SERVER['REMOTE_URI']);
 ```
 
-#### <a name='ThecontrollersFolder'></a>The /controllers Folder
+#### The /controllers Folder
 
 This router handles SubDirectories as `controllers`
 
@@ -59,12 +57,12 @@ GET kitchen/coffemachine => __DIR__ . "/controllers/kitchen.php"
 GET kitchen/coffemachine/coffee.html => __DIR__ . "/controllers/kitchen.php"
 ```
 
-#### <a name='Thecontrollers_.phpFile'></a>The /controllers/_.php File
+#### The /controllers/_.php File
 If the requested URL does not contain a directory, the request will be handled
 by the Controller defined in this file.
 
 
-### <a name='DefiningControllers'></a>Defining Controllers
+### Defining Controllers
 As the already described, the Router uses the first directory of a URL to define the controller-file.
 Inside that file a Class with the Attribute `#[RouterController]` should be part
 of this File.
@@ -103,7 +101,7 @@ a basic controller file could look like this.
         public static function coffeemachineCoffeePage() {
 
             // this name does not matter, ----/\
-            // because Attributes, but you may choose something, that 
+            // because Attributes, but you may choose something, that
             // makes it easier to find for your editor
 
             echo "<h1>Coffeemachine => choose </h1>",
@@ -115,33 +113,33 @@ a basic controller file could look like this.
 
     }
 ```
-> [!warning]  
+> [!warning]
 > Since the first found directory identfies the controller, you can't invoke the controller
 > by it's name alone.
-> 
-> lets take `GET /kitchen` as an example. You would want this to be handled by   
+>
+> lets take `GET /kitchen` as an example. You would want this to be handled by
 > `__DIR__ . "/controllers/kitchen.php"` => `RouterRoute("")`
 >
-> However, there is no directory in the URL `/kitchen`, while there is one in `/kitchen/`.  
+> However, there is no directory in the URL `/kitchen`, while there is one in `/kitchen/`.
 > `/kitchen` (without trailing `/`) will be handled by `_.php` (the default controller) instead.
 
 
-### <a name='DefiningRoutes'></a>Defining Routes
+### Defining Routes
 Routes are `static` class functions identified by the `#[RouterRoute]` Attribute.
 
-RouterMethods are given 2 Parameters.
+RouterMethods are given at least 2 Parameters.
 ```php
 // A reference to the Router that is currently processing the Request
-Router $router 
+Router $router
 
-// The RequestURL, that is currently processed
-string $path
+// An array, containing matched route and, for expression-routed, the matched capture groups
+string[] $matches
 ```
 
-We can use these two to solve the problem, that routers can't be invoked by semselfs 
+We can use these two to solve the problem, that routers can't be invoked by semselfs
 without a trailing `/` in the url
 
-in `_.php` (the default controller) define a route method, that redirects a call to 
+in `_.php` (the default controller) define a route method, that redirects a call to
 `office` and `kitchen` to their `office/` and `kitchen/` counterparts.
 ```php
     #[
@@ -149,11 +147,43 @@ in `_.php` (the default controller) define a route method, that redirects a call
         RouterRoute("kitchen")
     ]
     public static function redirectToControllerRoot(
-        Router $router, 
-        string $path
+        Router $router,
+        array $matches
     ) {
-        $router->HandleRoute("{$path}/"); // <- notice the added "/" at the end.
-                                          // a slash marks that this is a controller, rather than a route
+        $router->HandleRoute("{$matches[0]}/"); // <- matches[0] is always the full matched path, notice that we add "/" to the end.
+                                                // A slash marks that we target the controller, rather than a route
     }
-    
+
 ```
+
+### Defining Expression Routes
+It is possible to define more dynamic routes, by using regular expressions.
+
+```php
+    #[
+        RouterRoute( expression: "office-([0-9]+)(.*)" ),
+    ]
+    public static function redirectOfficeRoute(
+        Router $router,
+        array $matches
+    ) {
+        $officeid = $matches[1];
+        $path = $match[2];
+        $router->HandleRoute("office/{$officeid}{$path}");
+    }
+
+```
+The above RouterRoute would match any route containing the word office, followed by a dash and a number:
+```
+office-1
+...
+office-34
+...
+office-99
+...
+```
+Since expression routes follow RegularExpression / `preg_match` rules, and we put the number-match in parentheses `([0-9]+)`,
+we can extract that number through the $matches Paramter, given to the Route Handler.
+
+
+
