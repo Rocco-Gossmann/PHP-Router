@@ -202,11 +202,15 @@ class ExpressionParser extends RouteParser
 class RouterRoute
 {
 	private string $sRoute = "";
+	private string $method = "";
 	private RouteParser $routeParser;
+
+	private $_emptyMethod = true;
 
 	public function __construct(
 		?string $route = null,
-		?string $expression = null
+		?string $expression = null,
+		?string $method = ""
 	) {
 		if(!is_null($route))
 		{
@@ -223,10 +227,13 @@ class RouterRoute
 		else throw new RouterException(
 			"route without path or expression definition, please set either `route` or `expression` function parameter => set parameter: " . var_export(func_get_args(), true)
 		);
+
+		$this->method = trim(strtolower($method));
+		$this->_emptyMethod = empty($this->method);
 	}
 
-	public function hitsRoute(string $path) : bool {
-		return $this->routeParser->hitsRoute($this->sRoute, $path);
+	public function hitsRoute(string $method, string $path) : bool {
+		return (!$this->_emptyMethod || $this->method == $method) && $this->routeParser->hitsRoute($this->sRoute, $path);
 	}
 
 	public function routeParams() : array {
@@ -237,7 +244,6 @@ class RouterRoute
 
 class Router
 {
-
 	/**
 	 * @param string $controllerDirectory - path to the directory contraining all controller files
 	 * @param string $defaultControllerFileName - controllerfile to load, if no suitable controller is found for the first directory of the given path.
@@ -254,9 +260,11 @@ class Router
 	 * figures out what controller and method to call, based on the given full url
 	 * @param string $url  - example: $_SERVER['REQUEST_URI'] on apache
 	 */
-	public function HandleRoute(string $url) : never
+	public function HandleRoute(string $url, ?string $method) : never
 	{
 		$aURL = parse_url($url);
+
+		if(is_null($method)) $method = $_SERVER['REQUEST_METHOD'];
 
 		/** @var array $aClasses - this list will keep track of classes we don't need to scan for RouteControllers */
 		$aClasses = array_flip(get_declared_classes());
@@ -310,7 +318,7 @@ class Router
 						// => check the path it serves
 						/** @var RouterRoute $oRoute */
 						$oRoute = $oAttr->newInstance();
-						if (!$oRoute->hitsRoute($sPath)) continue;
+						if (!$oRoute->hitsRoute($method, $sPath)) continue;
 
 						// Bingo !!!
 						$params = [];
