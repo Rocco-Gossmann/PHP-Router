@@ -154,6 +154,7 @@ class RouterController
 	public static function handle404() : void
 	{
 		http_response_code(404);
+		exit;
 	}
 }
 
@@ -233,7 +234,7 @@ class RouterRoute
 	}
 
 	public function hitsRoute(string $method, string $path) : bool {
-		return (!$this->_emptyMethod || $this->method == $method) && $this->routeParser->hitsRoute($this->sRoute, $path);
+		return ($this->_emptyMethod || $this->method == $method) && $this->routeParser->hitsRoute($this->sRoute, $path);
 	}
 
 	public function routeParams() : array {
