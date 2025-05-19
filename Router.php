@@ -5,7 +5,7 @@ namespace rogoss\router;
 /**
  * rogoss\Router
  * =============================================================================
- * @author  Rocco Goßmann <github.com/rocco-gossman>
+ * @author  Rocco Goßmann <github.com/rocco-gossmann>
  * @license MIT
  * =============================================================================
  *
@@ -29,6 +29,7 @@ namespace rogoss\router;
  * for a none default controller to be invoced, the url must at least contain one, none leading "/"
  *
  * @example:
+ *
  * lets say, we have 2 controllers:
  * _.php => as the default/root controller
  * office.php => as a controller to handle all "/office/*" requests
@@ -57,12 +58,12 @@ namespace rogoss\router;
  *      RouterRoute("potentialothercontroller")
  *   ]
  *   // Name still does not matter -----\/
- *   public static function redirectToControllerRoot(Router $router, string $path)
+ *   public static function redirectToControllerRoot(Router $router, string $matches)
  *   {
  *     // you get access to the current router and the $path, that lead here, so you can use this same function
  *     // to redirect other controllers as well
  *
- *     $router->HandleRoute("{$path}/"); // <- notice the added "/" at the end.
+ *     $router->HandleRoute("{$matches[0]}/"); // <- notice the added "/" at the end.
  *                                       // a slash marks that this is a controller, rather than a route
  *   }
  * }
@@ -77,17 +78,39 @@ namespace rogoss\router;
  *
  * #[RouterController]
  * class OfficeController {
- *   #[ RouterRoute( "" ) ] // <-- this is the entry for calls to "/office/"
- *   public function OfficeIndexButNameStillDoesNotMatter() {
- *     echo "welcome to the office"
- *     // do stuff in this route ...
- *   }
+ *    #[ RouterRoute( "" ) ] // <-- this is the entry for calls to "/office/"
+ *    public function OfficeIndexButNameStillDoesNotMatter() {
+ *        echo "welcome to the office"
+ *        // do stuff in this route ...
+ *    }
  *
- *   #[ RouterRoute( expression: "([0-9]+)/details" ) ] // <-- this is the entry for calls to, for example, "/office/10/details"
- *   public function OfficeIndexButNameStillDoesNotMatter($router, $path, $officeId) {
- *     echo "welcome to the office with the id ", $officeId
- *     // do stuff in this route ...
- *   }
+ * // routes an also match agains regular expressions, instead of simple strings.
+ * // for that, just use the `expression` parametername
+ *    #[ RouterRoute( expression: "([0-9]+)/(details|image)" ) ] // <-- this is the entry for calls to,
+ *       for example, "/office/10/details"
+ *       and          "/office/10/image"
+ *    public function OfficeIndexButNameStillDoesNotMatter($matches) {
+ *       $officeid = $matches[1];
+ *       $action = $matches[2];
+ *
+ *       switch($action) {
+ *           case "details":
+ *               echo "<h1>welcome to the office with the id ", $officeId, "</h1>";
+ *               // do stuff in this route ...
+ *               break;
+ *
+ *           case "image":
+ *               $file = "images/office-" . (int)$officeid . "-" . ".png";
+ *               if(file_exists($file)) {
+ *                   header("content-type: image/png");
+ *                   echo file_get_contents();
+ *               }
+ *               else RouterController::handle404()
+ *
+ *               break;
+ *
+ *        }
+ *    }
  * }
  *
  *	calling GET /office => would be handled by "_.php" => RouterRoute("office"), since there is no none-leading "/"
@@ -265,29 +288,50 @@ class Router
 		$sControllerClassName = get_class(new RouterController());
 		$sRouteAttributeName = get_class(new RouterRoute(""));
 
-		foreach (get_declared_classes() as $sClassName) {
+		foreach (get_declared_classes() as $sClassName)
+		{
 			if (isset($aClasses[$sClassName])) continue;
 
 			$oClassReflection = new ReflectionClass($sClassName);
 
-			foreach ($oClassReflection->getAttributes() as $oAttr) {
+			foreach ($oClassReflection->getAttributes() as $oAttr)
+			{
 				if ($oAttr->getName() != $sControllerClassName) continue;
 
 				// => check methods
 				$aMethods = $oClassReflection->getMethods();
-				foreach ($aMethods as $oMethod) {
-					foreach ($oMethod->getAttributes() as $oAttr) {
+				foreach ($aMethods as $oMethod)
+				{
+					foreach ($oMethod->getAttributes() as $oAttr)
+					{
 						if ($oAttr->getName() != $sRouteAttributeName)  continue;
 
 						// Found a Routing Method
 						// => check the path it serves
 						/** @var RouterRoute $oRoute */
 						$oRoute = $oAttr->newInstance();
-						if ($oRoute->hitsRoute($sPath)) {
-							// Bingo !!!
-							$oMethod->invokeArgs(null, $oRoute->routeParams());
-							exit;
+						if (!$oRoute->hitsRoute($sPath)) continue;
+
+						// Bingo !!!
+						$params = [];
+
+						foreach($oMethod->getParameters() as $oParams)
+						{
+							switch($oParams->name)
+							{
+								case "router":
+									$params["router"] = $this;
+									break;
+
+								case "matches":
+									$params["matches"] = $oRoute->routeParams();
+									break;
+
+							}
 						}
+
+						$oMethod->invokeArgs(null, $params);
+						exit;
 					}
 				}
 				break 2;

@@ -142,13 +142,17 @@ without a trailing `/` in the url
 in `_.php` (the default controller) define a route method, that redirects a call to
 `office` and `kitchen` to their `office/` and `kitchen/` counterparts.
 ```php
+<?php
+// ...
     #[
         RouterRoute("office"),
         RouterRoute("kitchen")
     ]
     public static function redirectToControllerRoot(
-        Router $router,
-        array $matches
+        Router $router,  // the parameters of the function are identified by name
+        array $matches   // therefor, you must define your parameters like this.
+                         // but the advantage of this is, that you only need to define the parameters,
+                         // that you actively use.
     ) {
         $router->HandleRoute("{$matches[0]}/"); // <- matches[0] is always the full matched path, notice that we add "/" to the end.
                                                 // A slash marks that we target the controller, rather than a route
@@ -160,19 +164,24 @@ in `_.php` (the default controller) define a route method, that redirects a call
 It is possible to define more dynamic routes, by using regular expressions.
 
 ```php
+<?php
+//...
     #[
-        RouterRoute( expression: "office-([0-9]+)(.*)" ),
+        RouterRoute( expression: "office-([0-9]+)" ),
     ]
     public static function redirectOfficeRoute(
-        Router $router,
-        array $matches
+        array $matches  // as mentioned in the example of the basic route.
+                        // the router used named parameters to call the route.
+                        // since this function doesn't need the router, we can
+                        // just define the $matches parameter and thus
+                        // don't need to worry about the LSP, nagging about "unused parameters"
     ) {
         $officeid = $matches[1];
-        $path = $match[2];
-        $router->HandleRoute("office/{$officeid}{$path}");
+        // do something with the retreived $officeid
     }
 
 ```
+
 The above RouterRoute would match any route containing the word office, followed by a dash and a number:
 ```
 office-1
@@ -182,8 +191,8 @@ office-34
 office-99
 ...
 ```
-Since expression routes follow RegularExpression / `preg_match` rules, and we put the number-match in parentheses `([0-9]+)`,
 we can extract that number through the $matches Paramter, given to the Route Handler.
+Since expression routes follow RegularExpression / `preg_match` rules, and we put the number-match in parentheses `([0-9]+)`,
 
 
 
