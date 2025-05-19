@@ -260,7 +260,7 @@ class Router
 	 * figures out what controller and method to call, based on the given full url
 	 * @param string $url  - example: $_SERVER['REQUEST_URI'] on apache
 	 */
-	public function HandleRoute(string $url, ?string $method) : never
+	public function HandleRoute(string $url, ?string $method = null) : never
 	{
 		$aURL = parse_url($url);
 
