@@ -267,6 +267,8 @@ class Router
 
 		if(is_null($method)) $method = $_SERVER['REQUEST_METHOD'];
 
+		$method = strtolower($method);
+
 		/** @var array $aClasses - this list will keep track of classes we don't need to scan for RouteControllers */
 		$aClasses = array_flip(get_declared_classes());
 
