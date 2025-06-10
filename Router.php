@@ -188,7 +188,7 @@ class ExpressionParser extends RouteParser
     public function hitsRoute(string $route, string $path): bool
     {
 		$this->params = [];
-		return preg_match("#" . $route . "#", $path, $this->params);
+		return preg_match("#" . $route . "#i", $path, $this->params);
     }
 
 	public function routeParameters(): array
