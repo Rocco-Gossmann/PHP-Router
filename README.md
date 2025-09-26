@@ -40,6 +40,13 @@ to be executed.
         // The Default Controller, used to handle all calles to the domain
         __DIR__ . "/controllers/_.php",
 
+        // if the given URL is not handled by a Controller, the Router will search this DIR for the
+        // requested URL
+        __DIR__ . "/static_content",
+
+        // Should the content not be found in the "static_content" folder either,
+        // a 404 response is given
+
     ))->HandleRoute($_SERVER['REMOTE_URI']);
 ```
 
