@@ -316,7 +316,6 @@ class Router
 		$sPath = "";
 
 		$sControllerFile = self::_extractControllerFileNameFromPathList($aURL['path'] ?? "", $sPath);
-		$sPath = strtolower($sPath);
 
 		// If no suitable controllerfile was found yet, use the default one
 		if (is_null($sControllerFile)) $sControllerFile = $this->defaultControllerFileName;
