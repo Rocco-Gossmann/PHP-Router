@@ -161,6 +161,12 @@ class RouterController
 
 		if(empty($staticDir)) return self::handle404();
 
+		// INFO: Pragma is concidered depricated by Chrome, so we'll disable it here
+		header("Pragma: ", true);
+
+		// NOTE: maybe we can make the max-age configurable in the future
+		header("Cache-Control: max-age=3600");
+
 		$ext = pathinfo($path, PATHINFO_EXTENSION);
 
 		if(isset(Router::$mimeTypes[$ext]))
