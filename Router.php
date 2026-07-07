@@ -330,15 +330,17 @@ class Router
 			exit;
 		}
 
+		$classes = get_declared_classes();
+
 		// Scan the controllerfile and invoce the appropriate route
 		require_once $sControllerFile;
+		$routerClasses = array_diff(get_declared_classes(), $classes);
 
 		// Prepare for finding the Attributes
 		$sControllerClassName = get_class(new RouterController());
 		$sRouteAttributeName = get_class(new RouterRoute(""));
 
-		foreach (get_declared_classes() as $sClassName) {
-			if (isset($aClasses[$sClassName])) continue;
+		foreach ($routerClasses as $sClassName) {
 
 			$oClassReflection = new ReflectionClass($sClassName);
 
