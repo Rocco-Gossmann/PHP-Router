@@ -133,6 +133,7 @@ namespace rogoss\router;
 use Attribute;
 use Exception;
 use ReflectionClass;
+use ReflectionMethod;
 
 /** Thrown if Router fails to initialize */
 class RouterException extends Exception
@@ -149,10 +150,10 @@ class RouterException extends Exception
  * In case the identified file should create multiple classes
  */
 #[Attribute(Attribute::TARGET_CLASS)]
-class RouterController
-{
-	public static function handle404(): void
-	{
+class RouterController {
+
+	public static function handle404(): void {
+
 		http_response_code(404);
 		exit;
 	}
@@ -197,8 +198,8 @@ class RouterController
 }
 
 /** @internal */
-abstract class RouteParser
-{
+abstract class RouteParser {
+
 	abstract function hitsRoute(string $route, string $path): bool;
 
 	/** @return array */
@@ -206,8 +207,8 @@ abstract class RouteParser
 }
 
 /** @internal */
-class SimpleRouteParser extends RouteParser
-{
+class SimpleRouteParser extends RouteParser {
+
 	private string $route = "";
 	public function hitsRoute(string $route, string $path): bool
 	{
@@ -222,8 +223,8 @@ class SimpleRouteParser extends RouteParser
 }
 
 /** @internal */
-class ExpressionParser extends RouteParser
-{
+class ExpressionParser extends RouteParser {
+
 	private $params = [];
 
 	public function hitsRoute(string $route, string $path): bool
@@ -254,6 +255,7 @@ class RouterRoute
 		?string $expression = null,
 		?string $method = ""
 	) {
+
 		if (!is_null($route)) {
 			$this->routeParser = new SimpleRouteParser($route);
 			$this->sRoute = $route;
@@ -270,13 +272,13 @@ class RouterRoute
 		$this->_emptyMethod = empty($this->method);
 	}
 
-	public function hitsRoute(string $method, string $path): bool
-	{
+	public function hitsRoute(string $method, string $path): bool {
+
 		return ($this->_emptyMethod || $this->method == $method) && $this->routeParser->hitsRoute($this->sRoute, $path);
 	}
 
-	public function routeParams(): array
-	{
+	public function routeParams(): array {
+
 		return $this->routeParser->routeParameters() ?? [];
 	}
 }
@@ -293,24 +295,23 @@ class Router
 		private string $defaultControllerFileName,
 		private ?string $staticFolder = null
 	) {
+
 		$this->controllerDirectory = realpath($controllerDirectory);
-		if (empty($this->controllerDirectory)) throw new RouterException("Directory {$controllerDirectory} does not exist", RouterException::CODE_MISSING_CONTROLLERDIR);
+		if (empty($this->controllerDirectory))
+			throw new RouterException("Directory {$controllerDirectory} does not exist", RouterException::CODE_MISSING_CONTROLLERDIR);
 	}
 
 	/**
 	 * figures out what controller and method to call, based on the given full url
 	 * @param string $url  - example: $_SERVER['REQUEST_URI'] on apache
 	 */
-	public function HandleRoute(string $url, ?string $method = null): never
-	{
+	public function HandleRoute(string $url, ?string $method = null): never {
+
 		$aURL = parse_url($url);
 
 		if (is_null($method)) $method = $_SERVER['REQUEST_METHOD'];
 
 		$method = strtolower($method);
-
-		/** @var array $aClasses - this list will keep track of classes we don't need to scan for RouteControllers */
-		$aClasses = array_flip(get_declared_classes());
 
 		/** @var string $controllerFile - find the controller to load.
 		 * defined through the first directory in the path
@@ -325,61 +326,74 @@ class Router
 
 		// If no suitable controllerfile was found yet, use the default one
 		if (is_null($sControllerFile)) $sControllerFile = $this->defaultControllerFileName;
+
 		if (empty($sControllerFile)) {
+
 			RouterController::handle404();
 			exit;
 		}
 
-		$classes = get_declared_classes();
+		$aClasses = get_declared_classes();
 
 		// Scan the controllerfile and invoce the appropriate route
 		require_once $sControllerFile;
-		$routerClasses = array_diff(get_declared_classes(), $classes);
+		$aPotentialRouterClasses = array_diff(get_declared_classes(), $aClasses);
 
-		// Prepare for finding the Attributes
-		$sControllerClassName = get_class(new RouterController());
-		$sRouteAttributeName = get_class(new RouterRoute(""));
-
-		foreach ($routerClasses as $sClassName) {
+		foreach ($aPotentialRouterClasses as $sClassName) {
 
 			$oClassReflection = new ReflectionClass($sClassName);
 
-			foreach ($oClassReflection->getAttributes() as $oAttr) {
-				if ($oAttr->getName() != $sControllerClassName) continue;
+			if(!count(
+				$oClassReflection->getAttributes(RouterController::class)
+			)) continue;
 
-				// => check methods
-				$aMethods = $oClassReflection->getMethods();
-				foreach ($aMethods as $oMethod) {
-					foreach ($oMethod->getAttributes() as $oAttr) {
-						if ($oAttr->getName() != $sRouteAttributeName)  continue;
+			// => check methods
+			$aMethods = $oClassReflection->getMethods(
+				ReflectionMethod::IS_STATIC |
+				ReflectionMethod::IS_PUBLIC
+			);
 
-						// Found a Routing Method
-						// => check the path it serves
-						/** @var RouterRoute $oRoute */
-						$oRoute = $oAttr->newInstance();
-						if (!$oRoute->hitsRoute($method, $sPath)) continue;
+			foreach ($aMethods as $oMethod) {
 
-						// Bingo !!!
-						$params = [];
+				foreach ($oMethod->getAttributes(RouterRoute::class) as $oAttr) {
 
-						foreach ($oMethod->getParameters() as $oParams) {
-							switch ($oParams->name) {
-								case "router":
-									$params["router"] = $this;
-									break;
+					// Found a Routing Method
+					// => check the path it serves
+					/** @var RouterRoute $oRoute */
+					$oRoute = $oAttr->newInstance();
+					if (!$oRoute->hitsRoute($method, $sPath)) continue;
 
-								case "matches":
-									$params["matches"] = $oRoute->routeParams();
-									break;
-							}
+					// Bingo !!!
+					$params = [];
+
+					$foundArray = false;
+					$foundRouter = false;
+					foreach ($oMethod->getParameters() as $oParameterReflection) {
+
+						$mType = $oParameterReflection->getType();
+
+						switch ($mType) {
+						case "array":
+							if($foundArray) break;
+							$params[$oParameterReflection->getName()] = $oRoute->routeParams();
+							$foundArray = true;
+							break;
+
+						case Router::class:
+							if($foundRouter) break;
+							$params[$oParameterReflection->getName()] = $this;
+							$foundRouter = true;
+							break;
+
 						}
-
-						$oMethod->invokeArgs(null, $params);
-						exit;
 					}
+
+					$oMethod->invokeArgs(null, $params);
+					exit;
+
 				}
-				break 2;
 			}
+			break;
 		}
 
 		RouterController::handleStatic($this->staticFolder, $sPath);
