@@ -58,12 +58,22 @@ namespace rogoss\router;
  *      RouterRoute("potentialothercontroller")
  *   ]
  *   // Name still does not matter -----\/
- *   public static function redirectToControllerRoot(Router $router, string $matches)
- *   {
+ *   public static function redirectToControllerRoot(Router $router, array $routeParameters) {
+ *
  *     // you get access to the current router and the $path, that lead here, so you can use this same function
  *     // to redirect other controllers as well
  *
- *     $router->HandleRoute("{$matches[0]}/"); // <- notice the added "/" at the end.
+ *     // by setting an `array` as one of the RouterHandlers-Arguments
+ *     // you can extract informations about the called route.
+ *     // index 0 of that array is always the fully matched route.
+ *     // (so in this case either "office" or "potentialothercontroller"
+ *
+ *     // in similar fashion, if your RouterHandler expects a Router type Argument, the
+ *     // the Router, that is currently calling this method is passed as well.
+ *
+ *     // the name and order of the argument does not matter it must just be an array and or a Router-Type.
+ *
+ *     $router->HandleRoute("{$routeParameters[0]}/"); // <- notice the added "/" at the end.
  *                                       // a slash marks that this is a controller, rather than a route
  *   }
  * }
@@ -87,11 +97,16 @@ namespace rogoss\router;
  * // routes an also match agains regular expressions, instead of simple strings.
  * // for that, just use the `expression` parametername
  *    #[ RouterRoute( expression: "([0-9]+)/(details|image)" ) ] // <-- this is the entry for calls to,
- *       for example, "/office/10/details"
- *       and          "/office/10/image"
- *    public function OfficeIndexButNameStillDoesNotMatter($matches) {
- *       $officeid = $matches[1];
- *       $action = $matches[2];
+ *       // for example, "/office/10/details"
+ *       // and          "/office/10/image"
+ *    public function OfficeIndexButNameStillDoesNotMatter(array $pregMatchMatches) {
+ *
+ *       // For expression-Routes, the array-parameter of the HandlerMethod is filled
+ *       // with the $match-array that was filled by the preg_match opperation that
+ *       // parsed the Route (So you could also use something like named capture groups).
+ *
+ *       $officeid = $pregMatchMatches[1];
+ *       $action = $pregMatchMatches[2];
  *
  *       switch($action) {
  *           case "details":
@@ -210,14 +225,14 @@ abstract class RouteParser {
 class SimpleRouteParser extends RouteParser {
 
 	private string $route = "";
-	public function hitsRoute(string $route, string $path): bool
-	{
+	public function hitsRoute(string $route, string $path): bool {
+
 		$this->route = $path;
 		return strtolower($route) == $path;
 	}
 
-	public function routeParameters(): array
-	{
+	public function routeParameters(): array {
+
 		return [$this->route];
 	}
 }
